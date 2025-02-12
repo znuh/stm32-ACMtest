@@ -1,4 +1,8 @@
+#include "platform.h"
 
 int main(void) {
-	return 0;
+	hw_init();
+	while(1) {
+		SLEEP_UNTIL(0);
+	}
 }

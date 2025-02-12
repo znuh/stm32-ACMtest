@@ -3,8 +3,8 @@ BUILD_DIR = bin
 
 SHARED_DIR = ../common-code
 CFILES = main.c
-#CFILES += api.c
-#AFILES += api-asm.S
+CFILES += console.c platform.c stm32f0_usb.c
+AFILES += lowlevel.S
 
 # TODO - you will need to edit these two lines!
 DEVICE=stm32f042k6t6
