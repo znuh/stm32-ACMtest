@@ -20,7 +20,6 @@
 
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/crs.h>
-#include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/st_usbfs.h>
 
 #include <libopencm3/usb/usbd.h>
@@ -183,8 +182,7 @@ static const char *usb_strings[] = {
 
 void usb_setup(void);
 
-volatile int usb_active   = 0;
-
+volatile int usb_active     = 0;
 static usbd_device *usb_dev = NULL;
 
 /* Buffer to be used for control requests. */
@@ -237,6 +235,7 @@ uint8_t  usb_rxbuf[USB_RXBUF_SZ];
 
 volatile uint32_t SIGINT        = 0;
 
+/* called by cdcacm_data_rx_cb in USB ISR context */
 static inline void rx_put(uint8_t d) {
 	usb_rxbuf[usb_rx_put++] = d;
 	usb_rx_put &= (USB_RXBUF_SZ-1);
@@ -244,17 +243,21 @@ static inline void rx_put(uint8_t d) {
 
 static uint32_t usb_rx_get=0;
 
+/* called by user from non-ISR context */
 static uint32_t usb_rx_request(void) {
 	return MIN(usb_rx_fill, USB_RXBUF_SZ-usb_rx_get);
 }
 
+/* called by user from non-ISR context */
 static void usb_rx_free(uint32_t chunk) {
+	uint8_t isr_state = nvic_get_irq_enabled(NVIC_USB_IRQ);
 	usb_rx_get+=chunk;
 	usb_rx_get &= (USB_RXBUF_SZ-1);
 	
 	nvic_disable_irq(NVIC_USB_IRQ);
 	usb_rx_fill-=chunk;
-	nvic_enable_irq(NVIC_USB_IRQ);
+	if(isr_state)
+		nvic_enable_irq(NVIC_USB_IRQ);
 }
 
 /* called by user from non-ISR context */
@@ -269,11 +272,14 @@ void usb_to_console(void) {
 /* called by user from non-ISR context */
 int usb_readbyte(void) {
 	int res=-1;
+	if(!usb_active)
+		goto out;
 	SLEEP_UNTIL(SIGINT || usb_rx_request());
 	if(!SIGINT) {
 		res=*(usb_rxbuf+usb_rx_get);
 		usb_rx_free(1);
 	}
+out:
 	return res;
 }
 
@@ -288,6 +294,9 @@ static void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep) {
 		return;
 	if((len >= (int)(sizeof(bl_string)-1)) && (!memcmp(buf,bl_string,sizeof(bl_string)-1))) {
 		usbd_disconnect(usbd_dev, true);
+		usb_dev = NULL;
+		usb_active = 0;
+		nvic_disable_irq(NVIC_USB_IRQ);
 		start_bootloader();
 	}
 	len = MIN(len, (int)(USB_RXBUF_SZ-usb_rx_fill)); // clamp len to avoid rxbuf overruns
@@ -306,7 +315,8 @@ static volatile uint32_t usb_tx_active = 0;
 
 // called from non-ISR context only
 void cdcacm_waitfor_txdone(void) {
-	SLEEP_UNTIL(!usb_tx_active);
+	if(usb_active)
+		SLEEP_UNTIL(!usb_tx_active);
 }
 
 static void cdcacm_data_tx_cb(usbd_device *usbd_dev, uint8_t ep) {
@@ -357,6 +367,10 @@ static int usb_tx(const void *p, size_t n, int ascii) {
 	uint8_t isr_state = nvic_get_irq_enabled(NVIC_USB_IRQ);
 	if(isr_state)
 		nvic_disable_irq(NVIC_USB_IRQ);
+
+	/* drop data if USB not active */
+	if(!usb_active)
+		return n;
 
 	if(ascii) {
 		const char *d = p, *orig = p;
