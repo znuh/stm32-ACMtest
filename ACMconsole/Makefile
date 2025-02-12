@@ -18,3 +18,10 @@ OPENCM3_DIR=../libopencm3
 include $(OPENCM3_DIR)/mk/genlink-config.mk
 include ../rules.mk
 include $(OPENCM3_DIR)/mk/genlink-rules.mk
+
+all: $(PROJECT).bin
+	$(PREFIX)size $(PROJECT).elf
+
+load: $(PROJECT).bin
+	(echo ICANHAZBOOTLOADER > /dev/ttyACM0 && sleep 2) || true
+	dfu-util -a 0 -s 0x08000000:leave -D $(PROJECT).bin
