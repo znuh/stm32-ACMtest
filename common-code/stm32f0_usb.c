@@ -427,9 +427,14 @@ void usb_isr(void) {
 }
 
 void usb_setup(void) {
-	/* TBD: HSE/HSI */
+/* for PLL USB clock source an external HSE and PLL output of 48MHz is necessary */
+#ifdef USBCLK_USE_PLL
+	rcc_set_usbclk_source(RCC_PLL);
+#else
+	/* default to HSI48 w/ CRS unless user sets USBCLK_USE_PLL */
 	rcc_set_usbclk_source(RCC_HSI48);
 	crs_autotrim_usb_enable();
+#endif
 
 	usb_dev = usbd_init(&st_usbfs_v2_usb_driver, &dev, &config, usb_strings,
 						sizeof(usb_strings)/sizeof(char *),
