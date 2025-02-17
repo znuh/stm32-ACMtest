@@ -53,7 +53,7 @@ void sleep_ms(uint32_t ms) {
 */
 
 static void clocks_setup(void) {
-	rcc_clock_setup_in_hsi_out_48mhz();
+	rcc_clock_setup_in_hsi48_out_48mhz();
 //	rcc_periph_clock_enable(RCC_GPIOA);
 //	rcc_periph_clock_enable(RCC_GPIOB);
 }
