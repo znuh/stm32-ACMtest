@@ -363,14 +363,15 @@ static inline void tx_put(uint8_t d) {
 
 /* only called via write from non-ISR context */
 static int usb_tx(const void *p, size_t n, int ascii) {
-	int res;
 	uint8_t isr_state = nvic_get_irq_enabled(NVIC_USB_IRQ);
-	if(isr_state)
-		nvic_disable_irq(NVIC_USB_IRQ);
+	int res;
 
 	/* drop data if USB not active */
 	if(!usb_active)
 		return n;
+
+	if(isr_state)
+		nvic_disable_irq(NVIC_USB_IRQ);
 
 	if(ascii) {
 		const char *d = p, *orig = p;
