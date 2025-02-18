@@ -20,9 +20,9 @@ static void erase_vt_command_handler(void) {
 	puts("A powercycle may be needed to access the bootloader.");
 	fputs("Continue? (Enter yes): ", stdout);
 	fflush(stdout);
-	cdcacm_waitfor_txdone();
+	ACM_waitfor_txdone();
 	for(SIGINT=0;*yes;yes++) {
-		int v = usb_readbyte();
+		int v = ACM_readbyte();
 		if((*yes ^ v) || SIGINT)
 			goto abort;
 		write(1,&v,1);
@@ -30,7 +30,7 @@ static void erase_vt_command_handler(void) {
 	if((!(*yes)) && (!SIGINT)) {
 		puts("Erasing page 0 - USB will disconnect now.");
 		fflush(stdout);
-		cdcacm_waitfor_txdone();
+		ACM_waitfor_txdone();
 		usb_shutdown();
 		erase_page0(0xAA55);
 	}
@@ -52,6 +52,11 @@ static void anim_command_handler(void) {
 	puts("");
 }
 
+/* TODO:
+ * - optional heartbeat LED
+ * - make STDIO optional?
+ */
+
 /* list of console commands */
 static const console_command_def_t * const console_commands[] = {
 	ver, erase_vt, anim,
@@ -68,16 +73,18 @@ int main(void) {
 	const console_init_t init_console = {.write_function = console_write};
 	const console_command_def_t * const *cmd;
 
-	hw_init();
+	hw_init(); // see ../common-code/platform.c
 
+	/* init console & register all commands */
 	console_init(&init_console);
 	for(cmd=console_commands;*cmd;cmd++)
 		console_command_register(*cmd);
 
+	/* main loop */
 	while(1) {
-		SLEEP_UNTIL(usb_rx_fill);
-		if(usb_rx_fill)
-			usb_to_console();
+		SLEEP_UNTIL(ACM_rx_fill);
+		if(ACM_rx_fill)
+			ACM_to_console();
 	}
 	return 0;
 }

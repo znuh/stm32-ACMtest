@@ -29,16 +29,13 @@
 
 #include <libopencmsis/core_cm3.h>
 
-#include <stdlib.h>
-#include <string.h>
-
-#include <errno.h>
-#include <stdio.h>
-#include <unistd.h>
+#include <string.h> // needed for memcmp & memcpy
 
 #include "platform.h"
 #include "utils.h"
 #include "console.h"
+
+#include <unistd.h>
 
 static const struct usb_device_descriptor dev = {
   .bLength = USB_DT_DEVICE_SIZE,
@@ -182,7 +179,7 @@ static const char *usb_strings[] = {
 
 void usb_setup(void);
 
-volatile int usb_active     = 0;
+volatile int ACM_active     = 0;
 static usbd_device *usb_dev = NULL;
 
 /* Buffer to be used for control requests. */
@@ -225,56 +222,56 @@ static enum usbd_request_return_codes cdcacm_control_request(usbd_device *usbd_d
 
 static const char bl_string[] = "ICANHAZBOOTLOADER";
 
-#define  USB_RXBUF_SZ             128
-static   uint32_t usb_rx_put    = 0;
-volatile uint32_t usb_rx_fill   = 0;
-uint8_t  usb_rxbuf[USB_RXBUF_SZ];
+#define  ACM_RXBUF_SZ             128
+static   uint32_t ACM_rx_put    = 0;
+volatile uint32_t ACM_rx_fill   = 0;
+uint8_t  ACM_rxbuf[ACM_RXBUF_SZ];
 
 volatile uint32_t SIGINT        = 0;
 
 /* called by cdcacm_data_rx_cb in USB ISR context */
 static inline void rx_put(uint8_t d) {
-	usb_rxbuf[usb_rx_put++] = d;
-	usb_rx_put &= (USB_RXBUF_SZ-1);
+	ACM_rxbuf[ACM_rx_put++] = d;
+	ACM_rx_put &= (ACM_RXBUF_SZ-1);
 }
 
-static uint32_t usb_rx_get=0;
+static uint32_t ACM_rx_get=0;
 
 /* called by user from non-ISR context */
-static uint32_t usb_rx_request(void) {
-	return MIN(usb_rx_fill, USB_RXBUF_SZ-usb_rx_get);
+static uint32_t ACM_rx_request(void) {
+	return MIN(ACM_rx_fill, ACM_RXBUF_SZ-ACM_rx_get);
 }
 
 /* called by user from non-ISR context */
-static void usb_rx_free(uint32_t chunk) {
+static void ACM_rx_free(uint32_t chunk) {
 	uint8_t isr_state = nvic_get_irq_enabled(NVIC_USB_IRQ);
-	usb_rx_get+=chunk;
-	usb_rx_get &= (USB_RXBUF_SZ-1);
+	ACM_rx_get+=chunk;
+	ACM_rx_get &= (ACM_RXBUF_SZ-1);
 	
 	nvic_disable_irq(NVIC_USB_IRQ);
-	usb_rx_fill-=chunk;
+	ACM_rx_fill-=chunk;
 	if(isr_state)
 		nvic_enable_irq(NVIC_USB_IRQ);
 }
 
 /* called by user from non-ISR context */
-void usb_to_console(void) {
+void ACM_to_console(void) {
 	uint8_t buf[64];
-	const uint32_t chunk = MIN(usb_rx_request(), sizeof(buf));
-	memcpy(buf, usb_rxbuf+usb_rx_get, chunk);
-	usb_rx_free(chunk);
+	const uint32_t chunk = MIN(ACM_rx_request(), sizeof(buf));
+	memcpy(buf, ACM_rxbuf+ACM_rx_get, chunk);
+	ACM_rx_free(chunk);
 	console_process(buf, chunk);
 }
 
 /* called by user from non-ISR context */
-int usb_readbyte(void) {
+int ACM_readbyte(void) {
 	int res=-1;
-	if(!usb_active)
+	if(!ACM_active)
 		goto out;
-	SLEEP_UNTIL(SIGINT || usb_rx_request());
+	SLEEP_UNTIL(SIGINT || ACM_rx_request());
 	if(!SIGINT) {
-		res=*(usb_rxbuf+usb_rx_get);
-		usb_rx_free(1);
+		res=*(ACM_rxbuf+ACM_rx_get);
+		ACM_rx_free(1);
 	}
 out:
 	return res;
@@ -282,9 +279,9 @@ out:
 
 void usb_shutdown(void) {
 	nvic_disable_irq(NVIC_USB_IRQ);
+	ACM_active = 0;
 	usbd_disconnect(usb_dev, true);
 	usb_dev = NULL;
-	usb_active = 0;
 }
 
 /* called by USB stack in USB ISR context */
@@ -300,46 +297,46 @@ static void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep) {
 		usb_shutdown();
 		erase_page0(0xAA55);
 	}
-	len = MIN(len, (int)(USB_RXBUF_SZ-usb_rx_fill)); // clamp len to avoid rxbuf overruns
-	usb_rx_fill+=len;
+	len = MIN(len, (int)(ACM_RXBUF_SZ-ACM_rx_fill)); // clamp len to avoid rxbuf overruns
+	ACM_rx_fill+=len;
 	for(;len;len--,d++) {
 		rx_put(*d == '\r' ? '\n' : *d);
 		SIGINT += (*d == 0x03);
 	}
 }
 
-#define USB_TXBUF_SZ          1024
-static volatile uint32_t usb_tx_fill   = 0;
-static uint8_t  usb_txbuf[USB_TXBUF_SZ];
+#define ACM_TXBUF_SZ          1024
+static volatile uint32_t ACM_tx_fill   = 0;
+static uint8_t  ACM_txbuf[ACM_TXBUF_SZ];
 
-static volatile uint32_t usb_tx_active = 0;
+static volatile uint32_t ACM_tx_active = 0;
 
 // called from non-ISR context only
-void cdcacm_waitfor_txdone(void) {
-	if(usb_active)
-		SLEEP_UNTIL(!usb_tx_active);
+void ACM_waitfor_txdone(void) {
+	if(ACM_active)
+		SLEEP_UNTIL(!ACM_tx_active);
 }
 
 static void cdcacm_data_tx_cb(usbd_device *usbd_dev, uint8_t ep) {
-	static uint32_t usb_tx_get    = 0;
+	static uint32_t ACM_tx_get    = 0;
 
-	if((!usb_active) || (!usb_tx_fill)) {
-		usb_tx_active = 0;
+	if((!ACM_active) || (!ACM_tx_fill)) {
+		ACM_tx_active = 0;
 		return;
 	}
 
-	usb_tx_active = 1;
+	ACM_tx_active = 1;
 	ep&=0x7f;
 	if ((*USB_EP_REG(ep) & USB_EP_TX_STAT) != USB_EP_TX_STAT_VALID) { /* check if busy */
 		volatile uint16_t *PM = (volatile void *)USB_GET_EP_TX_BUFF(ep);
-		uint32_t i, len = MIN(usb_tx_fill, 64);
+		uint32_t i, len = MIN(ACM_tx_fill, 64);
 		uint16_t buf = 0;
 
 		/* write 16bit words */
 		for(i=0;i<len;i++) {
 			buf>>=8;
-			buf|=usb_txbuf[usb_tx_get++]<<8;
-			usb_tx_get&=(USB_TXBUF_SZ-1);
+			buf|=ACM_txbuf[ACM_tx_get++]<<8;
+			ACM_tx_get&=(ACM_TXBUF_SZ-1);
 			if(i&1)
 				*PM++ = buf;
 		}
@@ -351,24 +348,24 @@ static void cdcacm_data_tx_cb(usbd_device *usbd_dev, uint8_t ep) {
 		USB_SET_EP_TX_COUNT(ep, len);
 		USB_SET_EP_TX_STAT(ep, USB_EP_TX_STAT_VALID);
 
-		usb_tx_fill -= len;
+		ACM_tx_fill -= len;
 	}
 	usbd_dev = usbd_dev; /* mute compiler warning */
 }
 
 static inline void tx_put(uint8_t d) {
-	static uint32_t usb_tx_put = 0;
-	usb_txbuf[usb_tx_put++] = d;
-	usb_tx_put &= (USB_TXBUF_SZ-1);
+	static uint32_t ACM_tx_put = 0;
+	ACM_txbuf[ACM_tx_put++] = d;
+	ACM_tx_put &= (ACM_TXBUF_SZ-1);
 }
 
-/* only called via write from non-ISR context */
-static int usb_tx(const void *p, size_t n, int ascii) {
+/* only called from non-ISR context */
+static int ACM_tx(const void *p, size_t n, int ascii) {
 	uint8_t isr_state = nvic_get_irq_enabled(NVIC_USB_IRQ);
 	int res;
 
 	/* drop data if USB not active */
-	if(!usb_active)
+	if(!ACM_active)
 		return n;
 
 	if(isr_state)
@@ -377,10 +374,10 @@ static int usb_tx(const void *p, size_t n, int ascii) {
 	if(ascii) {
 		const char *d = p, *orig = p;
 		res=0;
-		for(;(n) && ((USB_TXBUF_SZ - usb_tx_fill) >= 2);n--,d++,usb_tx_fill++) {
+		for(;(n) && ((ACM_TXBUF_SZ - ACM_tx_fill) >= 2);n--,d++,ACM_tx_fill++) {
 			if(*d == '\n') {
 				tx_put((uint8_t)'\r');
-				usb_tx_fill++;
+				ACM_tx_fill++;
 			}
 			tx_put((uint8_t)*d);
 		}
@@ -388,13 +385,13 @@ static int usb_tx(const void *p, size_t n, int ascii) {
 	}
 	else {
 		const uint8_t *d = p;
-		res = MIN(USB_TXBUF_SZ - usb_tx_fill, n);
+		res = MIN(ACM_TXBUF_SZ - ACM_tx_fill, n);
 		for(n=res;n;n--,d++)
 			tx_put(*d);
-		usb_tx_fill += res;
+		ACM_tx_fill += res;
 	}
 
-	if((usb_tx_fill) && (!usb_tx_active))
+	if((ACM_tx_fill) && (!ACM_tx_active))
 		cdcacm_data_tx_cb(usb_dev, 0x82); /* send 1st chunk */
 
 	if(isr_state)
@@ -406,7 +403,7 @@ int _write(int file, char *ptr, int len);
 
 int _write(int file, char *ptr, int len) {
 	int drop = (file != STDOUT_FILENO) && (file != STDERR_FILENO);
-	return drop ? len : usb_tx(ptr, len, 1);
+	return drop ? len : ACM_tx(ptr, len, 1);
 }
 
 static void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue) {
@@ -419,7 +416,7 @@ static void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue) {
 				USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
 				cdcacm_control_request);
 	wValue = wValue;
-	usb_active = 1;
+	ACM_active = 1;
 }
 
 void usb_isr(void) {

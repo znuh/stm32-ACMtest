@@ -48,13 +48,13 @@ void hw_init(void);
 
 #define SLEEP_UNTIL(cond) do { SLEEP_UNTIL_IRQDISABLE(cond); __enable_irq(); } while(0)
 
-extern volatile uint32_t usb_rx_fill;
+extern volatile uint32_t ACM_rx_fill;
 
 extern volatile uint32_t SIGINT;
 
-void cdcacm_waitfor_txdone(void);
-void usb_to_console(void);
-int usb_readbyte(void);
+void ACM_waitfor_txdone(void);
+void ACM_to_console(void);
+int  ACM_readbyte(void);
 void usb_shutdown(void);
 
 void erase_page0(uint32_t safety_key);
