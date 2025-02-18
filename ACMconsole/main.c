@@ -5,6 +5,31 @@
 #include <stdio.h>
 #include <unistd.h>
 
+// see config.h
+#if defined(HEARTBEAT_LED_PORT) && defined(HEARTBEAT_LED_PIN)
+
+#include <libopencm3/stm32/rcc.h>
+#include <libopencm3/stm32/gpio.h>
+
+static void heartbeat_init(void) {
+	rcc_periph_clock_enable(HEARTBEAT_RCC);
+	gpio_set_output_options(HEARTBEAT_LED_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_LOW, HEARTBEAT_LED_PIN);
+	gpio_mode_setup(HEARTBEAT_LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, HEARTBEAT_LED_PIN);
+}
+
+static void heartbeat(uint32_t now) {
+	static timeout_t t = { .expired = 1 };
+	if(timeout_check(&t,now)) {
+		gpio_toggle(HEARTBEAT_LED_PORT, HEARTBEAT_LED_PIN);
+		timeout_set(&t, HZ/2);
+	}
+}
+
+#else
+static void heartbeat_init(void)	{}
+static void heartbeat(uint32_t now)	{now=now;}
+#endif
+
 /* these are some example console commands */
 
 CONSOLE_COMMAND_DEF(ver, "show firmware info/version");
@@ -53,7 +78,6 @@ static void anim_command_handler(void) {
 }
 
 /* TODO:
- * - optional heartbeat LED
  * - make STDIO optional?
  */
 
@@ -72,8 +96,11 @@ static void console_write(const char *s) {
 int main(void) {
 	const console_init_t init_console = {.write_function = console_write};
 	const console_command_def_t * const *cmd;
+	uint32_t last=0;
 
 	hw_init(); // see ../common-code/platform.c
+
+	heartbeat_init();
 
 	/* init console & register all commands */
 	console_init(&init_console);
@@ -82,9 +109,10 @@ int main(void) {
 
 	/* main loop */
 	while(1) {
-		SLEEP_UNTIL(ACM_rx_fill);
+		SLEEP_UNTIL(ACM_rx_fill || (last != jiffies));
 		if(ACM_rx_fill)
 			ACM_to_console();
+		heartbeat((last=jiffies));
 	}
 	return 0;
 }
