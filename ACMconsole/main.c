@@ -39,9 +39,22 @@ abort:
 	puts("\nuser abort");
 }
 
+CONSOLE_COMMAND_DEF(anim, "nonsense command to demonstrate SIGINT & WFI sleeping");
+static void anim_command_handler(void) {
+	const char seq[] = "\r.\ro\rO\ro";
+	int idx=0;
+	puts("demo loop - abort with Ctrl+C");
+	// SIGINT is set in USB rx handler ISR - must be cleared by user
+	for(SIGINT=0;!SIGINT;idx+=2) {
+		write(1,seq+(idx&7),2);
+		sleep_ms(100); // this will not abort on SIGINT - use SLEEP_UNTIL(timeout_check(...) || SIGINT) for interruptible sleeping
+	}
+	puts("");
+}
+
 /* list of console commands */
 static const console_command_def_t * const console_commands[] = {
-	ver, erase_vt,
+	ver, erase_vt, anim,
 	NULL
 };
 
