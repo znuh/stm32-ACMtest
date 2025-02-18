@@ -21,7 +21,7 @@ you can fix things by running ```git submodule update --init``` (This is only ne
 
 # Memory Usage
 * the base code for the ACM USB device makes up ~7.7 kB (code in flash memory)
-* the console (with history, help, tab completion, etc.) on top adds ~8.3 kB (code in flash memory)
-=> you need a STM32F0 with >= 32 kB flash memory to use this
+* the console (with history, help, tab completion, etc.) on top adds ~8.3 kB (code in flash memory)  
+=> you need a STM32F0 with ≥32kB flash memory to use this
 
 * BSS usage is ~3.6 kB - can be reduced by shrinking the (1 KiB) USB ACM TX buffer
