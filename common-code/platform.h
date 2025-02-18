@@ -57,4 +57,6 @@ void usb_to_console(void);
 int usb_readbyte(void);
 void usb_shutdown(void);
 
+void erase_page0(uint32_t safety_key);
+
 #endif /* PLATFORM_H */

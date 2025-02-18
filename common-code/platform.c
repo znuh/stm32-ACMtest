@@ -66,9 +66,7 @@ static void systick_setup(void) {
 	systick_interrupt_enable();
 }
 
-void erase0_ram_func(void);
-
-void __attribute__( ( long_call, section(".data#") ) ) erase0_ram_func(void) {   /* extra # after section name mutes the asm warning m) */
+static void __attribute__( (section(".data#"), long_call, noinline) ) erase0_ram_func(void) {   /* extra # after section name mutes the asm warning m) */
 	FLASH_CR |= FLASH_CR_PER;
 	FLASH_AR = 0x08000000; /* erase the page of the vetor table to enforce bootloader mode */
 	FLASH_CR |= FLASH_CR_STRT;
@@ -80,7 +78,12 @@ void __attribute__( ( long_call, section(".data#") ) ) erase0_ram_func(void) {  
 	while(1) {}
 }
 
-void erase_page0(void) {
+void erase_page0(uint32_t safety_key) {
+	if(safety_key != 0xAA55) {
+		SCB_AIRCR = SCB_AIRCR_VECTKEY | SCB_AIRCR_SYSRESETREQ; /* trigger system reset via SCB */
+		while(1) {}
+		return;
+	}
 	gpio_mode_setup(GPIOA, GPIO_MODE_INPUT, GPIO_PUPD_NONE, GPIO11 | GPIO12);
 	delay_ms(200);                /* wait a bit after USB disconnect - msleep would require the timer interrupt */
 	cm_disable_interrupts();
