@@ -225,7 +225,7 @@ static enum usbd_request_return_codes cdcacm_control_request(usbd_device *usbd_d
 
 static const char bl_string[] = "ICANHAZBOOTLOADER";
 
-extern void start_bootloader(void);
+extern void erase_page0(void);
 
 
 #define  USB_RXBUF_SZ             128
@@ -283,6 +283,13 @@ out:
 	return res;
 }
 
+void usb_shutdown(void) {
+	nvic_disable_irq(NVIC_USB_IRQ);
+	usbd_disconnect(usb_dev, true);
+	usb_dev = NULL;
+	usb_active = 0;
+}
+
 /* called by USB stack in USB ISR context */
 static void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep) {
 	char buf[64], *d=buf;
@@ -293,11 +300,8 @@ static void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep) {
 	if(!len)
 		return;
 	if((len >= (int)(sizeof(bl_string)-1)) && (!memcmp(buf,bl_string,sizeof(bl_string)-1))) {
-		usbd_disconnect(usbd_dev, true);
-		usb_dev = NULL;
-		usb_active = 0;
-		nvic_disable_irq(NVIC_USB_IRQ);
-		start_bootloader();
+		usb_shutdown();
+		erase_page0();
 	}
 	len = MIN(len, (int)(USB_RXBUF_SZ-usb_rx_fill)); // clamp len to avoid rxbuf overruns
 	usb_rx_fill+=len;

@@ -55,5 +55,6 @@ extern volatile uint32_t SIGINT;
 void cdcacm_waitfor_txdone(void);
 void usb_to_console(void);
 int usb_readbyte(void);
+void usb_shutdown(void);
 
 #endif /* PLATFORM_H */
