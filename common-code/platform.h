@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#include "config.h"
+
 #include <libopencmsis/core_cm3.h>
 #include "utils.h"
 #include "lowlevel.h"

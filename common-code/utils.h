@@ -9,4 +9,7 @@
 #define MIN(a,b)    ((a)<=(b)?(a):(b))
 #endif
 
+#include <stdint.h>
+char *i32_to_dec(int32_t val, char *buf, unsigned int n, int point_ofs, unsigned int zeropad);
+
 #endif /* UTILS_H */

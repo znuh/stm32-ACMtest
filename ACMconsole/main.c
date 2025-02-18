@@ -77,13 +77,26 @@ static void anim_command_handler(void) {
 	puts("");
 }
 
+/* example command with arguments */
+CONSOLE_COMMAND_DEF(echo, "example command - takes one integer and an optional string argument",
+	CONSOLE_INT_ARG_DEF(arg1, "integer argument"),
+	CONSOLE_OPTIONAL_STR_ARG_DEF(str, "optional string argument")
+);
+static void echo_command_handler(const echo_args_t* args) {
+	char buf[20] = "arg1: ";
+	i32_to_dec(args->arg1, buf+6, 11, -1, 0);
+	fputs(buf, stdout);
+	fputs(", arg2: ", stdout);
+	puts(args->str ? args->str : "(NULL)");
+}
+
 /* TODO:
  * - make STDIO optional?
  */
 
 /* list of console commands */
 static const console_command_def_t * const console_commands[] = {
-	ver, erase_vt, anim,
+	ver, erase_vt, anim, echo,
 	NULL
 };
 
