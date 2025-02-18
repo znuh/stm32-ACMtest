@@ -1,14 +1,19 @@
 PROJECT = ACMconsole
 BUILD_DIR = bin
 
+GIT_COMMIT  := "$(shell git describe --abbrev=8 --dirty --always --tags)"
+GIT_BRANCH  := "$(shell git branch --show-current)"
+GIT_REMOTE  := "$(shell git config --get remote.origin.url)"
+GIT_VERSION := "$(GIT_REMOTE) $(GIT_BRANCH) $(GIT_COMMIT)"
+
 SHARED_DIR = ../common-code
 CFILES = main.c
 CFILES += console.c platform.c stm32f0_usb.c
 AFILES += lowlevel.S
+CFLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\"
 
-# TODO - you will need to edit these two lines!
+# NOTE: edit for other STM32 parts
 DEVICE=stm32f042k6t6
-#OOCD_FILE = board/stm32f4discovery.cfg
 
 # You shouldn't have to edit anything below here.
 VPATH += $(SHARED_DIR)
