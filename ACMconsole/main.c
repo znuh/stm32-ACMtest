@@ -30,7 +30,9 @@ static void heartbeat_init(void)	{}
 static void heartbeat(uint32_t now)	{now=now;}
 #endif
 
-/* these are some example console commands */
+/* these are some example console commands
+ *
+ * make sure to have a look at common-code/console_config.h to verify the console settings */
 
 CONSOLE_COMMAND_DEF(ver, "show firmware info/version");
 static void ver_command_handler(void) {
