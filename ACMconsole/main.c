@@ -40,10 +40,10 @@ static void ver_command_handler(void) {
 CONSOLE_COMMAND_DEF(erase_vt, "erase flash page 0 to reenable DFU bootloader");
 static void erase_vt_command_handler(void) {
 	const char *yes = "yes\n";
-	puts("WARNING! This will erase a part of the firmware (flash page 0) to reenable");
-	puts("the BootROM DFU bootloader. The firmware will no longer work after this!");
-	puts("A powercycle may be needed to access the bootloader.");
-	fputs("Continue? (Enter yes): ", stdout);
+	fputs("WARNING! This will erase a part of the firmware (flash page 0) to reenable\n"
+	"the BootROM DFU bootloader. The firmware will no longer work after this!\n"
+	"A powercycle may be needed to access the bootloader.\n"
+	"Continue? (Enter yes): ", stdout);
 	fflush(stdout);
 	ACM_waitfor_txdone();
 	for(SIGINT=0;*yes;yes++) {
