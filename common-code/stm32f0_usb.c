@@ -35,7 +35,16 @@
 #include "utils.h"
 #include "console.h"
 
+#ifndef NO_STDIO
 #include <unistd.h>
+
+int _write(int file, char *ptr, int len);
+
+int _write(int file, char *ptr, int len) {
+	int drop = (file != STDOUT_FILENO) && (file != STDERR_FILENO);
+	return drop ? len : ACM_tx(ptr, len, 1);
+}
+#endif
 
 static const struct usb_device_descriptor dev = {
   .bLength = USB_DT_DEVICE_SIZE,
@@ -359,8 +368,10 @@ static inline void tx_put(uint8_t d) {
 	ACM_tx_put &= (ACM_TXBUF_SZ-1);
 }
 
-/* only called from non-ISR context */
-static int ACM_tx(const void *p, size_t n, int ascii) {
+/* only called from non-ISR context
+ * NOTE: might write <n bytes if TX buffer is full
+ * check return value and retry with remainder if this happens */
+int ACM_tx(const void *p, size_t n, int ascii) {
 	uint8_t isr_state = nvic_get_irq_enabled(NVIC_USB_IRQ);
 	int res;
 
@@ -397,13 +408,6 @@ static int ACM_tx(const void *p, size_t n, int ascii) {
 	if(isr_state)
 		nvic_enable_irq(NVIC_USB_IRQ);
 	return res;
-}
-
-int _write(int file, char *ptr, int len);
-
-int _write(int file, char *ptr, int len) {
-	int drop = (file != STDOUT_FILENO) && (file != STDERR_FILENO);
-	return drop ? len : ACM_tx(ptr, len, 1);
 }
 
 static void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue) {

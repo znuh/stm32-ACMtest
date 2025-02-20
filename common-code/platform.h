@@ -54,6 +54,7 @@ extern volatile uint32_t ACM_rx_fill;
 
 extern volatile uint32_t SIGINT;
 
+int  ACM_tx(const void *p, size_t n, int ascii);
 void ACM_waitfor_txdone(void);
 void ACM_to_console(void);
 int  ACM_readbyte(void);

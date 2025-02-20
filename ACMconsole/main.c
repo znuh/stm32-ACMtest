@@ -2,8 +2,17 @@
 #include "console.h"
 
 #include <string.h>
+
+#ifndef NO_STDIO
 #include <stdio.h>
 #include <unistd.h>
+#else
+#define fflush(a)
+#define stdout
+#define write(fd,p,n)   ACM_tx((p), (n), 1)
+#define fputs(str,fh)   ACM_tx((str), strlen(str), 1)
+#define puts(str)       do{ ACM_tx((str), strlen(str), 1); ACM_tx("\n", 1, 1); } while(0)
+#endif // defined(NO_STDIO)
 
 // see config.h
 #if defined(HEARTBEAT_LED_PORT) && defined(HEARTBEAT_LED_PIN)
