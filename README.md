@@ -4,7 +4,7 @@ It is based on the libopencm3-template repository (https://github.com/libopencm3
 Easy "clone and go" repository for a libopencm3-based STM32F0 project with an ACM console via USB.
 
 # Features
-* crystal-less USB operation (using the Clock Recovery System (CRS))
+* crystal-less USB operation (using the Clock Recovery System (CRS))  
 **=> no external HSE crystal is needed for USB**
 * USB ACM device
 * ACM console with tab completion, history, help, args checking, etc.
@@ -29,7 +29,7 @@ you can fix things by running ```git submodule update --init``` (This is only ne
 * the **base code** for the ACM USB device makes up **~7.7 kB** (code in flash memory)
 * the **console** (with history, help, tab completion, etc.) on top adds **~6.5 kB** (code in flash memory)  
 => you need a STM32 with **≥16kB** flash memory to use this
-* stdio (for (f)puts, etc. - **without \*printf**) adds ~3.5 kB (optional)
+* stdio (for (f)puts, etc. - **without \*printf**) adds ~3.5 kB (optional)  
 => you need a STM32 with ≥32kB flash memory to use this
 
 * BSS usage is ~3.6 kB - can be reduced by shrinking the (1 KiB) USB ACM TX buffer
