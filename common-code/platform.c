@@ -13,7 +13,6 @@
 #include <inttypes.h>
 
 extern void usb_setup(void);
-void start_bootloader(void);
 
 static void gpio_setup(void) {
 }
