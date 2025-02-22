@@ -52,7 +52,13 @@ void sleep_ms(uint32_t ms) {
 */
 
 static void clocks_setup(void) {
+#if defined(STM32F0)
 	rcc_clock_setup_in_hsi48_out_48mhz();
+#elif defined(STM32C0)
+	rcc_clock_setup(RCC_CLOCK_CONFIG_HSI_48MHZ);
+#else
+#	error "STM32 family not supported by this code"
+#endif
 //	rcc_periph_clock_enable(RCC_GPIOA);
 //	rcc_periph_clock_enable(RCC_GPIOB);
 }
@@ -66,10 +72,21 @@ static void systick_setup(void) {
 }
 
 static void __attribute__( (section(".data#"), long_call, noinline) ) erase0_ram_func(void) {   /* extra # after section name mutes the asm warning m) */
+#if defined(STM32F0)
 	FLASH_CR |= FLASH_CR_PER;
 	FLASH_AR = 0x08000000; /* erase the page of the vetor table to enforce bootloader mode */
 	FLASH_CR |= FLASH_CR_STRT;
-
+#elif defined(STM32C0)
+	uint32_t reg = FLASH_CR;
+	reg &= ~(FLASH_CR_PNB_MASK << FLASH_CR_PNB_SHIFT);
+	reg |= (0 & FLASH_CR_PNB_MASK)  << FLASH_CR_PNB_SHIFT;
+	reg |= FLASH_CR_PER;
+	reg |= FLASH_CR_STRT;
+	FLASH_CR = reg;
+#else
+#	error "STM32 family not supported by this code"
+#endif
+	
 	while(FLASH_SR & FLASH_SR_BSY) {} /* busywait */
 	FLASH_CR &= ~FLASH_CR_PER;
 
