@@ -429,6 +429,7 @@ void usb_isr(void) {
 }
 
 void usb_setup(void) {
+#if defined(STM32F0)
 /* for PLL USB clock source an external HSE and PLL output of 48MHz is necessary */
 #ifdef USBCLK_USE_PLL
 	rcc_set_usbclk_source(RCC_PLL);
@@ -436,6 +437,12 @@ void usb_setup(void) {
 	/* default to HSI48 w/ CRS unless user sets USBCLK_USE_PLL */
 	rcc_set_usbclk_source(RCC_HSI48);
 	crs_autotrim_usb_enable();
+#endif
+#elif defined(STM32C0)
+	rcc_set_usbclk_source(RCC_HSIUSB48);
+	crs_autotrim_usb_enable();
+#else
+#	error "STM32 family not supported by this code"
 #endif
 
 	usb_dev = usbd_init(&st_usbfs_v2_usb_driver, &dev, &config, usb_strings,
