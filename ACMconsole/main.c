@@ -101,10 +101,6 @@ static void echo_command_handler(const echo_args_t* args) {
 	puts(args->str ? args->str : "(NULL)");
 }
 
-/* TODO:
- * - make STDIO optional?
- */
-
 /* list of console commands */
 static const console_command_def_t * const console_commands[] = {
 	ver, erase_vt, anim, echo,
