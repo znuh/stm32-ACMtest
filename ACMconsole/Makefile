@@ -13,8 +13,8 @@ AFILES += lowlevel.S
 CFLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\"
 
 # NOTE: edit for other STM32 parts
-#DEVICE=stm32f042k6t6
-DEVICE=stm32c071kbt6
+DEVICE=stm32f042k6t6
+#DEVICE=stm32c071kbt6
 
 # You shouldn't have to edit anything below here.
 VPATH += $(SHARED_DIR)

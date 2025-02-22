@@ -10,10 +10,10 @@
 //#define NO_STDIO
 
 /* you can enable a heartbeat LED here - only active in main loop */
-/*
+
 #define HEARTBEAT_LED_PORT		GPIOB
 #define HEARTBEAT_LED_PIN		GPIO8
 #define HEARTBEAT_RCC 			RCC_GPIOB
-*/
+
 
 #endif
