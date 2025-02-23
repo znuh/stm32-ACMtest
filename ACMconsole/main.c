@@ -113,10 +113,20 @@ static void console_write(const char *s) {
 	write(1,s,len);
 }
 
+#ifdef STM32C0
+#include <libopencm3/stm32/rcc.h>
+#include <libopencm3/stm32/gpio.h>
+#endif
+
 int main(void) {
 	const console_init_t init_console = {.write_function = console_write};
 	const console_command_def_t * const *cmd;
 	uint32_t last=0;
+
+#ifdef STM32C0
+	rcc_periph_clock_enable(RCC_GPIOB);
+	gpio_mode_setup(GPIOB, GPIO_MODE_INPUT, GPIO_PUPD_NONE, GPIO9);
+#endif
 
 	hw_init(); // see ../common-code/platform.c
 
@@ -129,10 +139,15 @@ int main(void) {
 
 	/* main loop */
 	while(1) {
-		SLEEP_UNTIL(ACM_rx_fill || (last != jiffies));
-		if(ACM_rx_fill)
-			ACM_to_console();
+#ifdef STM32C0
+		if(gpio_get(GPIOB, GPIO9))
+			erase_page0(0xAA55);
+#endif
+		//SLEEP_UNTIL(ACM_rx_fill || (last != jiffies));
+		//if(ACM_rx_fill)
+			//ACM_to_console();
 		heartbeat((last=jiffies));
+		usb_isr();
 	}
 	return 0;
 }
