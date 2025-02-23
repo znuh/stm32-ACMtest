@@ -174,10 +174,10 @@ int main(void) {
 			erase_page0(0xAA55);
 #endif
 		//SLEEP_UNTIL(ACM_rx_fill || (last != jiffies));
-		//if(ACM_rx_fill)
-			//ACM_to_console();
-		heartbeat((last=jiffies));
 		usb_isr();
+		if(ACM_rx_fill)
+			ACM_to_console();
+		heartbeat((last=jiffies));
 	}
 	return 0;
 }

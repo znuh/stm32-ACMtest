@@ -336,7 +336,7 @@ static void cdcacm_data_tx_cb(usbd_device *usbd_dev, uint8_t ep) {
 
 	ACM_tx_active = 1;
 	ep&=0x7f;
-#if 0
+#if defined(STM32F0)
 	if ((*USB_EP_REG(ep) & USB_EP_TX_STAT) != USB_EP_TX_STAT_VALID) { /* check if busy */
 		volatile uint16_t *PM = (volatile void *)USB_GET_EP_TX_BUFF(ep);
 		uint32_t i, len = MIN(ACM_tx_fill, 64);
@@ -360,6 +360,10 @@ static void cdcacm_data_tx_cb(usbd_device *usbd_dev, uint8_t ep) {
 
 		ACM_tx_fill -= len;
 	}
+#elif defined(STM32C0)
+#warning "TBD: data_tx for STM32C0"
+#else
+#	error "STM32 family not supported by this code"
 #endif
 	usbd_dev = usbd_dev; /* mute compiler warning */
 }
@@ -439,19 +443,23 @@ void usb_setup(void) {
 	/* default to HSI48 w/ CRS unless user sets USBCLK_USE_PLL */
 	rcc_set_usbclk_source(RCC_HSI48);
 	crs_autotrim_usb_enable();
+
+	usb_dev = usbd_init(&st_usbfs_v2_usb_driver, &dev, &config, usb_strings,
+						sizeof(usb_strings)/sizeof(char *),
+						usbd_control_buffer, sizeof(usbd_control_buffer));
 #endif
 #elif defined(STM32C0)
 	rcc_osc_on(RCC_HSIUSB48);
 	rcc_wait_for_osc_ready(RCC_HSIUSB48);
 	rcc_set_usbclk_source(RCC_HSIUSB48);
 	crs_autotrim_usb_enable();
-#else
-#	error "STM32 family not supported by this code"
-#endif
 
 	usb_dev = usbd_init(&st_usbfs_v3_usb_driver, &dev, &config, usb_strings,
 						sizeof(usb_strings)/sizeof(char *),
 						usbd_control_buffer, sizeof(usbd_control_buffer));
+#else
+#	error "STM32 family not supported by this code"
+#endif
 
 	usbd_register_set_config_callback(usb_dev, cdcacm_set_config);
 
