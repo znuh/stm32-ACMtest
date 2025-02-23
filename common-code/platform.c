@@ -54,7 +54,7 @@ static void clocks_setup(void) {
 #if defined(STM32F0)
 	rcc_clock_setup_in_hsi48_out_48mhz();
 #elif defined(STM32C0)
-	rcc_clock_setup(RCC_CLOCK_CONFIG_HSI_48MHZ);
+	rcc_clock_setup(&rcc_clock_config[RCC_CLOCK_CONFIG_HSI_48MHZ]);
 #else
 #	error "STM32 family not supported by this code"
 #endif
