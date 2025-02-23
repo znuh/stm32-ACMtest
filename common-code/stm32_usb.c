@@ -464,5 +464,5 @@ void usb_setup(void) {
 	usbd_register_set_config_callback(usb_dev, cdcacm_set_config);
 
 	nvic_set_priority(NVIC_USB_IRQ, 255);  // lowest priority
-	//nvic_enable_irq(NVIC_USB_IRQ);
+	nvic_enable_irq(NVIC_USB_IRQ);
 }
