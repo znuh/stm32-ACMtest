@@ -441,6 +441,8 @@ void usb_setup(void) {
 	crs_autotrim_usb_enable();
 #endif
 #elif defined(STM32C0)
+	rcc_osc_on(RCC_HSIUSB48);
+	rcc_wait_for_osc_ready(RCC_HSIUSB48);
 	rcc_set_usbclk_source(RCC_HSIUSB48);
 	crs_autotrim_usb_enable();
 #else
