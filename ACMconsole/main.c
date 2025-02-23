@@ -116,6 +116,33 @@ static void console_write(const char *s) {
 #ifdef STM32C0
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
+#include <libopencm3/stm32/usart.h>
+
+/******** testing ********/
+static void usart_init(void) {
+	rcc_periph_clock_enable(RCC_GPIOA);
+	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO2);
+	gpio_set_output_options(GPIOA, GPIO_OTYPE_PP, GPIO_OSPEED_HIGH, GPIO2);
+	gpio_set_af(GPIOA, GPIO_AF1, GPIO2);
+
+	rcc_periph_clock_enable(RCC_USART2);
+
+	usart_set_baudrate(USART2, 3000000);
+	usart_set_databits(USART2, 8);
+	usart_set_parity(USART2, USART_PARITY_NONE);
+	usart_set_stopbits(USART2, USART_CR2_STOPBITS_1);
+	usart_set_mode(USART2, USART_MODE_TX);
+	usart_set_flow_control(USART2, USART_FLOWCONTROL_NONE);
+	usart_enable(USART2);
+}
+
+void u2tx(const char *s);
+void u2tx(const char *s) {
+	for(;*s;s++)
+		usart_send_blocking(USART2, *s);
+	usart_send_blocking(USART2, '\r');
+	usart_send_blocking(USART2, '\n');
+}
 #endif
 
 int main(void) {
@@ -123,12 +150,15 @@ int main(void) {
 	const console_command_def_t * const *cmd;
 	uint32_t last=0;
 
+	hw_init(); // see ../common-code/platform.c
+
 #ifdef STM32C0
 	rcc_periph_clock_enable(RCC_GPIOB);
 	gpio_mode_setup(GPIOB, GPIO_MODE_INPUT, GPIO_PUPD_NONE, GPIO9);
-#endif
 
-	hw_init(); // see ../common-code/platform.c
+	usart_init();
+	u2tx("HENLO ACM!11\r\n");
+#endif
 
 	heartbeat_init();
 
