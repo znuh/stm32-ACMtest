@@ -336,6 +336,10 @@ static void cdcacm_data_tx_cb(usbd_device *usbd_dev, uint8_t ep) {
 
 	ACM_tx_active = 1;
 	ep&=0x7f;
+/* TODO: find a sensible way to do this in the USB driver
+ * options:
+ * 1) usbd_ep_write_packet__from_ringbuf ??
+ * 2) usbd_ep_write_packet__sg (scatter-gather) */
 #if defined(STM32F0)
 	if ((*USB_EP_REG(ep) & USB_EP_TX_STAT) != USB_EP_TX_STAT_VALID) { /* check if busy */
 		volatile uint16_t *PM = (volatile void *)USB_GET_EP_TX_BUFF(ep);
