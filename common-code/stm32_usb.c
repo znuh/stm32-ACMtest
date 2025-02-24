@@ -434,6 +434,14 @@ void usb_isr(void) {
 		usbd_poll(usb_dev);
 }
 
+#if defined(STM32F0)
+#define ST_USBFS_DRIVER		&st_usbfs_v2_usb_driver
+#elif defined(STM32C0)
+#define ST_USBFS_DRIVER		&st_usbfs_v3_usb_driver
+#else
+#	error "STM32 family not supported by this code"
+#endif
+
 void usb_setup(void) {
 #if defined(STM32F0)
 /* for PLL USB clock source an external HSE and PLL output of 48MHz is necessary */
@@ -444,23 +452,17 @@ void usb_setup(void) {
 	rcc_set_usbclk_source(RCC_HSI48);
 	crs_autotrim_usb_enable();
 
-	usb_dev = usbd_init(&st_usbfs_v2_usb_driver, &dev, &config, usb_strings,
-						sizeof(usb_strings)/sizeof(char *),
-						usbd_control_buffer, sizeof(usbd_control_buffer));
 #endif
 #elif defined(STM32C0)
-	rcc_osc_on(RCC_HSIUSB48);
-	rcc_wait_for_osc_ready(RCC_HSIUSB48);
 	rcc_set_usbclk_source(RCC_HSIUSB48);
 	crs_autotrim_usb_enable();
-
-	usb_dev = usbd_init(&st_usbfs_v3_usb_driver, &dev, &config, usb_strings,
-						sizeof(usb_strings)/sizeof(char *),
-						usbd_control_buffer, sizeof(usbd_control_buffer));
 #else
 #	error "STM32 family not supported by this code"
 #endif
 
+	usb_dev = usbd_init(ST_USBFS_DRIVER, &dev, &config, usb_strings,
+						sizeof(usb_strings)/sizeof(char *),
+						usbd_control_buffer, sizeof(usbd_control_buffer));
 	usbd_register_set_config_callback(usb_dev, cdcacm_set_config);
 
 	nvic_set_priority(NVIC_USB_IRQ, 255);  // lowest priority
