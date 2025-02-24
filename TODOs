@@ -1,1 +1,3 @@
-- ST_USBFS: data_tx
+- test modified st_usbfs_v1 copy_to_pm fn
+- st_usbfs_v3: word-aligned copy_to_pm
+- st_usbfs_v3: use copy of BTABLE

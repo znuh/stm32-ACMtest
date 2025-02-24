@@ -326,8 +326,11 @@ void ACM_waitfor_txdone(void) {
 		SLEEP_UNTIL(!ACM_tx_active);
 }
 
+/* MUST be called with USB IRQ disabled */
 static void cdcacm_data_tx_cb(usbd_device *usbd_dev, uint8_t ep) {
 	static uint32_t ACM_tx_get    = 0;
+	uint32_t chunk;
+	uint16_t res;
 
 	if((!ACM_active) || (!ACM_tx_fill)) {
 		ACM_tx_active = 0;
@@ -335,41 +338,13 @@ static void cdcacm_data_tx_cb(usbd_device *usbd_dev, uint8_t ep) {
 	}
 
 	ACM_tx_active = 1;
-	ep&=0x7f;
-/* TODO: find a sensible way to do this in the USB driver
- * options:
- * 1) usbd_ep_write_packet__from_ringbuf ??
- * 2) usbd_ep_write_packet__sg (scatter-gather) */
-#if defined(STM32F0)
-	if ((*USB_EP_REG(ep) & USB_EP_TX_STAT) != USB_EP_TX_STAT_VALID) { /* check if busy */
-		volatile uint16_t *PM = (volatile void *)USB_GET_EP_TX_BUFF(ep);
-		uint32_t i, len = MIN(ACM_tx_fill, 64);
-		uint16_t buf = 0;
 
-		/* write 16bit words */
-		for(i=0;i<len;i++) {
-			buf>>=8;
-			buf|=ACM_txbuf[ACM_tx_get++]<<8;
-			ACM_tx_get&=(ACM_TXBUF_SZ-1);
-			if(i&1)
-				*PM++ = buf;
-		}
-
-		/* write remaining byte if odd length */
-		if(len&1)
-			*PM++ = buf>>8;
-
-		USB_SET_EP_TX_COUNT(ep, len);
-		USB_SET_EP_TX_STAT(ep, USB_EP_TX_STAT_VALID);
-
-		ACM_tx_fill -= len;
-	}
-#elif defined(STM32C0)
-#warning "TBD: data_tx for STM32C0"
-#else
-#	error "STM32 family not supported by this code"
-#endif
-	usbd_dev = usbd_dev; /* mute compiler warning */
+	chunk = MIN(MIN(64, ACM_tx_fill), ACM_TXBUF_SZ-ACM_tx_get);
+	res = usbd_ep_write_packet(usbd_dev, ep, ACM_txbuf + ACM_tx_get, chunk);
+	chunk = MIN(res, chunk); // sanity check, just in case...
+	ACM_tx_get += chunk;
+	ACM_tx_get &= (ACM_TXBUF_SZ-1);
+	ACM_tx_fill -= chunk;
 }
 
 static inline void tx_put(uint8_t d) {
