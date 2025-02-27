@@ -3,6 +3,10 @@
 
 #include <string.h>
 
+// for mem dump
+#include <stdlib.h>
+#include "utils.h"
+
 #ifndef NO_STDIO
 #include <stdio.h>
 #include <unistd.h>
@@ -46,6 +50,33 @@ static void heartbeat(uint32_t now)	{now=now;}
 CONSOLE_COMMAND_DEF(ver, "show firmware info/version");
 static void ver_command_handler(void) {
 	puts("FW_BASE: "GIT_VERSION"\n"__FILE__" "__DATE__" "__TIME__);
+}
+
+CONSOLE_COMMAND_DEF(md, "memory dump (32Bit words)",
+	CONSOLE_STR_ARG_DEF(addr, "hex address"),
+	CONSOLE_OPTIONAL_INT_ARG_DEF(n, "n_words")
+);
+static void md_command_handler(const md_args_t* args) {
+	uint32_t addr = strtoul(args->addr, NULL, 16);
+	volatile uint32_t *src = (volatile uint32_t *)(addr & (~3));
+	uint32_t i, n = (args->n >= 1) ? args->n : 8;
+	char buf[16];
+	for(i=0;i<n;i++,src++) {
+		/* print addr */
+		if(!(i&7)) {
+			u32_to_hex((uint32_t)src, buf);
+			buf[8]=':';
+			buf[9]=' ';
+			buf[10]=0;
+			fputs(buf, stdout);
+		}
+		u32_to_hex(*src, buf);
+		buf[8]= ((i&7)==7) ? '\n' : ' ';
+		buf[9]=0;
+		fputs(buf, stdout);
+	}
+	if(i&7)
+		puts("");
 }
 
 CONSOLE_COMMAND_DEF(erase_vt, "erase flash page 0 to reenable DFU bootloader");
@@ -103,7 +134,7 @@ static void echo_command_handler(const echo_args_t* args) {
 
 /* list of console commands */
 static const console_command_def_t * const console_commands[] = {
-	ver, erase_vt, anim, echo,
+	ver, md, erase_vt, anim, echo,
 	NULL
 };
 

@@ -33,3 +33,17 @@ char *i32_to_dec(int32_t val, char *buf, unsigned int n, int point_ofs, unsigned
 		*(--res)='-';
 	return res;
 }
+
+static inline char nibble2hex(uint8_t v) {
+	char nibble = v & 0xf;
+	return nibble + ((nibble > 9) ? ('a' - 10) : '0');
+}
+
+void u32_to_hex(uint32_t val, char *dst) {
+	val = __builtin_bswap32(val);
+	for (int i = 4; i ; i--, val >>= 8) {
+		*dst++ = nibble2hex(val>>4);
+		*dst++ = nibble2hex(val);
+	}
+	*dst = 0;
+}

@@ -11,5 +11,6 @@
 
 #include <stdint.h>
 char *i32_to_dec(int32_t val, char *buf, unsigned int n, int point_ofs, unsigned int zeropad);
+void u32_to_hex(uint32_t val, char *dst);
 
 #endif /* UTILS_H */
