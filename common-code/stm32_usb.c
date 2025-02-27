@@ -413,14 +413,6 @@ void usb_isr(void) {
 		usbd_poll(usb_dev);
 }
 
-#if defined(STM32F0)
-#define ST_USBFS_DRIVER		&st_usbfs_v2_usb_driver
-#elif defined(STM32C0)
-#define ST_USBFS_DRIVER		&st_usbfs_v3_usb_driver
-#else
-#	error "STM32 family not supported by this code"
-#endif
-
 void usb_setup(void) {
 #if defined(STM32F0)
 /* for PLL USB clock source an external HSE and PLL output of 48MHz is necessary */
