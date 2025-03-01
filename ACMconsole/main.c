@@ -184,9 +184,6 @@ int main(void) {
 	hw_init(); // see ../common-code/platform.c
 
 #ifdef STM32C0
-	rcc_periph_clock_enable(RCC_GPIOB);
-	gpio_mode_setup(GPIOB, GPIO_MODE_INPUT, GPIO_PUPD_NONE, GPIO9);
-
 	usart_init();
 	u2tx("HENLO ACM!11\r\n");
 #endif
@@ -200,10 +197,6 @@ int main(void) {
 
 	/* main loop */
 	while(1) {
-#ifdef STM32C0
-		if(gpio_get(GPIOB, GPIO9))
-			erase_page0(0xAA55);
-#endif
 		SLEEP_UNTIL(ACM_rx_fill || (last != jiffies));
 		if(ACM_rx_fill)
 			ACM_to_console();
