@@ -341,10 +341,9 @@ static void cdcacm_data_tx_cb(usbd_device *usbd_dev, uint8_t ep) {
 
 	chunk = MIN(MIN(64, ACM_tx_fill), ACM_TXBUF_SZ-ACM_tx_get);
 	res = usbd_ep_write_packet(usbd_dev, ep, ACM_txbuf + ACM_tx_get, chunk);
-	chunk = MIN(res, chunk); // sanity check, just in case...
-	ACM_tx_get += chunk;
+	ACM_tx_get += res;
 	ACM_tx_get &= (ACM_TXBUF_SZ-1);
-	ACM_tx_fill -= chunk;
+	ACM_tx_fill -= res;
 }
 
 static inline void tx_put(uint8_t d) {
