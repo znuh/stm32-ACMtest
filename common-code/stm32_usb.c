@@ -430,7 +430,7 @@ void usb_setup(void) {
 #	error "STM32 family not supported by this code"
 #endif
 
-	usb_dev = usbd_init(ST_USBFS_DRIVER, &dev, &config, usb_strings,
+	usb_dev = usbd_init(&st_usbfs_usb_driver, &dev, &config, usb_strings,
 						sizeof(usb_strings)/sizeof(char *),
 						usbd_control_buffer, sizeof(usbd_control_buffer));
 	usbd_register_set_config_callback(usb_dev, cdcacm_set_config);
