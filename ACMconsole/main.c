@@ -146,11 +146,10 @@ CONSOLE_COMMAND_DEF(txtest, "txtest",
 static void txtest_command_handler(const txtest_args_t* args) {
 	const char *str = args->str + args->ofs;
 	int len = (args->len > 0) ? args->len : (int)strlen(str);
-	char buf[32]="ptr: 11223344 len: XX";
+	char buf[16]="ptr: 0 len: XX";
 
-	u32_to_hex((uint32_t)str, buf+5);
-	buf[13]=' ';
-	i32_to_dec(len, buf+19, 2, -1, 0);
+	buf[5]+=((uintptr_t)str)&3;
+	i32_to_dec(len, buf+12, 2, -1, 0);
 	puts(buf);
 	fflush(stdout);
 	ACM_waitfor_txdone();
