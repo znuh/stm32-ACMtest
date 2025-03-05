@@ -189,7 +189,8 @@ static const char *usb_strings[] = {
 void usb_setup(void);
 
 volatile int ACM_active     = 0;
-static usbd_device *usb_dev = NULL;
+//static
+usbd_device *usb_dev = NULL;
 
 /* Buffer to be used for control requests. */
 static uint8_t usbd_control_buffer[128];

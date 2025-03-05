@@ -132,9 +132,41 @@ static void echo_command_handler(const echo_args_t* args) {
 	puts(args->str ? args->str : "(NULL)");
 }
 
+#define USB_TXTEST
+#ifdef USB_TXTEST
+/* --- USB TX Test ------------------------------ */
+#include <libopencm3/usb/usbd.h>
+extern usbd_device *usb_dev;
+/* txtest */
+CONSOLE_COMMAND_DEF(txtest, "txtest",
+	CONSOLE_STR_ARG_DEF(str, "str"),
+	CONSOLE_INT_ARG_DEF(ofs, "ofs"),
+	CONSOLE_OPTIONAL_INT_ARG_DEF(len, "len")
+);
+static void txtest_command_handler(const txtest_args_t* args) {
+	const char *str = args->str + args->ofs;
+	int len = (args->len > 0) ? args->len : (int)strlen(str);
+	char buf[32]="ptr: 11223344 len: XX";
+
+	u32_to_hex((uint32_t)str, buf+5);
+	buf[13]=' ';
+	i32_to_dec(len, buf+19, 2, -1, 0);
+	puts(buf);
+	fflush(stdout);
+	ACM_waitfor_txdone();
+
+	usbd_ep_write_packet(usb_dev, 0x82, str, len);
+	sleep_ms(100);
+	puts("");
+}
+#endif /* USB_TXTEST */
+
 /* list of console commands */
 static const console_command_def_t * const console_commands[] = {
 	ver, md, erase_vt, anim, echo,
+#ifdef USB_TXTEST
+	txtest,
+#endif
 	NULL
 };
 
