@@ -11,9 +11,15 @@
 
 /* you can enable a heartbeat LED here - only active in main loop */
 
-#define HEARTBEAT_LED_PORT		GPIOB
-#define HEARTBEAT_LED_PIN		GPIO8
 #define HEARTBEAT_RCC 			RCC_GPIOB
+#define HEARTBEAT_LED_PORT		GPIOB
+
+#ifdef STM32C0
+#define HEARTBEAT_LED_PIN		GPIO2
+#else
+#define HEARTBEAT_LED_PIN		GPIO8
+#endif
+
 
 
 #endif
