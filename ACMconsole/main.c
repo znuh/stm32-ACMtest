@@ -74,14 +74,18 @@ static void pwmled_init(void) {
 }
 
 static void breathe(void) {
-	static uint32_t last_time=0, pwm=0, inc=-32;
+	static uint32_t last_time=0, brightness=0, inc=-32;
+	uint32_t pwm;
 	if(last_time == jiffies)
 		return;
 	last_time=jiffies;
-	if((!pwm) || (pwm == (PWM_MAXVAL+1)))
+	if((!brightness) || (brightness == 4096))
 		inc=-inc;
-	pwm+=inc;
-	timer_set_oc_value(TIM14, TIM_OC1, MIN(pwm,PWM_MAXVAL));
+	brightness+=inc;
+	pwm = MIN(brightness, 4095);
+	pwm *= pwm;
+	pwm>>=12;
+	timer_set_oc_value(TIM14, TIM_OC1, pwm);
 }
 #endif
 
