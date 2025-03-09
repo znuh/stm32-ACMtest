@@ -79,7 +79,7 @@ static void breathe(void) {
 	if(last_time == jiffies)
 		return;
 	last_time=jiffies;
-	if((!brightness) || (brightness == 4096))
+	if((!brightness) || (brightness == (4096+1024)))
 		inc=-inc;
 	brightness+=inc;
 	pwm = MIN(brightness, 4095);
