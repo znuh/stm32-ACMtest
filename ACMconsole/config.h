@@ -15,7 +15,8 @@
 #define HEARTBEAT_LED_PORT		GPIOB
 
 #ifdef STM32C0
-#define HEARTBEAT_LED_PIN		GPIO2
+#define HEARTBEAT_LED_PIN		GPIO2	/* cyan */
+#define BREATHING_LED
 #else
 #define HEARTBEAT_LED_PIN		GPIO8
 #endif

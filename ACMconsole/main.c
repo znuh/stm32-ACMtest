@@ -43,6 +43,48 @@ static void heartbeat_init(void)	{}
 static void heartbeat(uint32_t now)	{now=now;}
 #endif
 
+#if defined(BREATHING_LED)
+#include <libopencm3/stm32/rcc.h>
+#include <libopencm3/stm32/gpio.h>
+#include <libopencm3/stm32/timer.h>
+
+#define PWM_FREQUENCY	500
+#define PWM_MAXVAL		(4096-1)
+
+static void pwmled_init(void) {
+    uint32_t prescaler = (rcc_apb1_frequency / (PWM_FREQUENCY * (PWM_MAXVAL+1))) - 1;
+
+	gpio_set_output_options(GPIOB, GPIO_OTYPE_PP, GPIO_OSPEED_LOW, GPIO1);
+	gpio_mode_setup(GPIOB, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO1);
+	gpio_set_af(GPIOB, GPIO_AF0, GPIO1);
+
+	rcc_periph_clock_enable(RCC_TIM14);
+	rcc_periph_reset_pulse(RST_TIM14);
+
+	timer_set_prescaler(TIM14, prescaler); // Set prescaler
+	timer_set_period(TIM14, PWM_MAXVAL); // Set auto-reload register
+
+	//timer_disable_oc_output(TIM14, TIM_OC1);
+	timer_set_oc_mode(TIM14, TIM_OC1, TIM_OCM_PWM1);
+	timer_enable_oc_preload(TIM14, TIM_OC1);
+
+	timer_set_oc_value(TIM14, TIM_OC1, 0);
+	timer_enable_oc_output(TIM14, TIM_OC1);
+	timer_enable_counter(TIM14);
+}
+
+static void breathe(void) {
+	static uint32_t last_time=0, pwm=0, inc=-32;
+	if(last_time == jiffies)
+		return;
+	last_time=jiffies;
+	if((!pwm) || (pwm == (PWM_MAXVAL+1)))
+		inc=-inc;
+	pwm+=inc;
+	timer_set_oc_value(TIM14, TIM_OC1, MIN(pwm,PWM_MAXVAL));
+}
+#endif
+
 /* these are some example console commands
  *
  * make sure to have a look at common-code/console_config.h to verify the console settings */
@@ -143,7 +185,7 @@ static void console_write(const char *s) {
 	write(1,s,len);
 }
 
-#ifdef STM32C0
+#ifdef DEBUG_UART
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/usart.h>
@@ -182,12 +224,16 @@ int main(void) {
 
 	hw_init(); // see ../common-code/platform.c
 
-#ifdef STM32C0
+#ifdef DEBUG_UART
 	usart_init();
-	u2tx("HENLO ACM!11\r\n");
+	u2tx("HENLO UART!11\r\n");
 #endif
 
 	heartbeat_init();
+
+#ifdef BREATHING_LED
+	pwmled_init();
+#endif
 
 	/* init console & register all commands */
 	console_init(&init_console);
@@ -200,6 +246,9 @@ int main(void) {
 		if(ACM_rx_fill)
 			ACM_to_console();
 		heartbeat((last=jiffies));
+#ifdef BREATHING_LED
+		breathe();
+#endif
 	}
 	return 0;
 }
