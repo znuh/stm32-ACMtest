@@ -74,11 +74,8 @@ static void pwmled_init(void) {
 }
 
 static void breathe(void) {
-	static uint32_t last_time=0, brightness=0, inc=-32;
+	static uint32_t brightness=0, inc=-32;
 	uint32_t pwm;
-	if(last_time == jiffies)
-		return;
-	last_time=jiffies;
 	if((!brightness) || (brightness == (4096+1024)))
 		inc=-inc;
 	brightness+=inc;
@@ -224,7 +221,7 @@ void u2tx(const char *s) {
 int main(void) {
 	const console_init_t init_console = {.write_function = console_write};
 	const console_command_def_t * const *cmd;
-	uint32_t last=0;
+	uint32_t last=0, now;
 
 	hw_init(); // see ../common-code/platform.c
 
@@ -246,13 +243,15 @@ int main(void) {
 
 	/* main loop */
 	while(1) {
-		SLEEP_UNTIL(ACM_rx_fill || (last != jiffies));
+		SLEEP_UNTIL((last != (now=jiffies)) || ACM_rx_fill);
 		if(ACM_rx_fill)
 			ACM_to_console();
-		heartbeat((last=jiffies));
+		if(last != now) {
 #ifdef BREATHING_LED
-		breathe();
+			breathe();
 #endif
+			heartbeat((last=now));
+		}
 	}
 	return 0;
 }
