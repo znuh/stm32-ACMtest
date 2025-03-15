@@ -14,11 +14,20 @@
 #define HEARTBEAT_RCC 			RCC_GPIOB
 #define HEARTBEAT_LED_PORT		GPIOB
 
-#ifdef STM32C0
+#if defined(STM32C0)
 #define HEARTBEAT_LED_PIN		GPIO2	/* cyan */
 #define BREATHING_LED
-#else
+
+#define BOOT0_RCC				RCC_GPIOA
+#define BOOT0_PORT				GPIOA
+#define BOOT0_PIN				GPIO14
+
+#elif defined(STM32F0)
 #define HEARTBEAT_LED_PIN		GPIO8
+
+#define BOOT0_RCC				RCC_GPIOB
+#define BOOT0_PORT				GPIOB
+#define BOOT0_PIN				GPIO88
 #endif
 
 
