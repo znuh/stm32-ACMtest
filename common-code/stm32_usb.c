@@ -328,8 +328,8 @@ void ACM_waitfor_txdone(void) {
 
 /* MUST be called with USB IRQ disabled */
 static void cdcacm_data_tx_cb(usbd_device *usbd_dev, uint8_t ep) {
-	static uint32_t ACM_tx_get    = 0;
-	uint32_t chunk;
+	static volatile uint32_t ACM_tx_get = 0;
+	uint32_t chunk, tx_get;
 	uint16_t res;
 
 	if((!ACM_active) || (!ACM_tx_fill)) {
@@ -339,10 +339,12 @@ static void cdcacm_data_tx_cb(usbd_device *usbd_dev, uint8_t ep) {
 
 	ACM_tx_active = 1;
 
-	chunk = MIN(MIN(64, ACM_tx_fill), ACM_TXBUF_SZ-ACM_tx_get);
-	res = usbd_ep_write_packet(usbd_dev, ep, ACM_txbuf + ACM_tx_get, chunk);
-	ACM_tx_get += res;
-	ACM_tx_get &= (ACM_TXBUF_SZ-1);
+	tx_get = ACM_tx_get;
+	chunk = MIN(MIN(64, ACM_tx_fill), ACM_TXBUF_SZ-tx_get);
+	res = usbd_ep_write_packet(usbd_dev, ep, ACM_txbuf + tx_get, chunk);
+	tx_get += res;
+	tx_get &= (ACM_TXBUF_SZ-1);
+	ACM_tx_get = tx_get;
 	ACM_tx_fill -= res;
 }
 
