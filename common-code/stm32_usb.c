@@ -38,7 +38,41 @@
 #ifndef NO_STDIO
 #include <unistd.h>
 
+#include <sys/stat.h>
+#include <errno.h>
+
+int _read(int file, char *ptr, int len);
+int _lseek(int file, int ptr, int dir);
+int _close(int file);
+int _fstat(int file, struct stat *st);
+int _isatty(int file);
 int _write(int file, char *ptr, int len);
+
+int _read(int file, char *ptr, int len) {
+    (void)file; (void)ptr; (void)len;
+    return 0; // Return 0 to indicate End Of File
+}
+
+int _lseek(int file, int ptr, int dir) {
+    (void)file; (void)ptr; (void)dir;
+    return 0;
+}
+
+int _close(int file) {
+    (void)file;
+    return -1;
+}
+
+int _fstat(int file, struct stat *st) {
+    (void)file;
+    st->st_mode = S_IFCHR; // Pretend it's a character device (like a UART)
+    return 0;
+}
+
+int _isatty(int file) {
+    (void)file;
+    return 1;
+}
 
 int _write(int file, char *ptr, int len) {
 	int drop = (file != STDOUT_FILENO) && (file != STDERR_FILENO);
@@ -248,7 +282,8 @@ static uint32_t ACM_rx_get=0;
 
 /* called by user from non-ISR context */
 static uint32_t ACM_rx_request(void) {
-	return MIN(ACM_rx_fill, ACM_RXBUF_SZ-ACM_rx_get);
+	uint32_t fill = ACM_rx_fill;
+	return MIN(fill, ACM_RXBUF_SZ-ACM_rx_get);
 }
 
 /* called by user from non-ISR context */
@@ -266,7 +301,8 @@ static void ACM_rx_free(uint32_t chunk) {
 /* called by user from non-ISR context */
 void ACM_to_console(void) {
 	uint8_t buf[64];
-	const uint32_t chunk = MIN(ACM_rx_request(), sizeof(buf));
+	uint32_t chunk = ACM_rx_request();
+	chunk = MIN(chunk, sizeof(buf));
 	memcpy(buf, ACM_rxbuf+ACM_rx_get, chunk);
 	ACM_rx_free(chunk);
 	console_process(buf, chunk);
@@ -306,12 +342,11 @@ static void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep) {
 		usb_shutdown();
 		erase_page0(0xAA55);
 	}
+	SIGINT += !!memchr(buf,0x03,len);
 	len = MIN(len, (int)(ACM_RXBUF_SZ-ACM_rx_fill)); // clamp len to avoid rxbuf overruns
 	ACM_rx_fill+=len;
-	for(;len;len--,d++) {
+	for(;len;len--,d++)
 		rx_put(*d == '\r' ? '\n' : *d);
-		SIGINT += (*d == 0x03);
-	}
 }
 
 #define ACM_TXBUF_SZ          1024
@@ -340,7 +375,9 @@ static void cdcacm_data_tx_cb(usbd_device *usbd_dev, uint8_t ep) {
 	ACM_tx_active = 1;
 
 	tx_get = ACM_tx_get;
-	chunk = MIN(MIN(64, ACM_tx_fill), ACM_TXBUF_SZ-tx_get);
+	chunk = ACM_tx_fill;
+	chunk = MIN(chunk, ACM_TXBUF_SZ-tx_get);
+	chunk = MIN(chunk, 64);
 	res = usbd_ep_write_packet(usbd_dev, ep, ACM_txbuf + tx_get, chunk);
 	tx_get += res;
 	tx_get &= (ACM_TXBUF_SZ-1);
@@ -382,7 +419,8 @@ int ACM_tx(const void *p, size_t n, int ascii) {
 	}
 	else {
 		const uint8_t *d = p;
-		res = MIN(ACM_TXBUF_SZ - ACM_tx_fill, n);
+		res = ACM_TXBUF_SZ - ACM_tx_fill;
+		res = MIN(res, (int)n);
 		for(n=res;n;n--,d++)
 			tx_put(*d);
 		ACM_tx_fill += res;
