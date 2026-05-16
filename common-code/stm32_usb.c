@@ -300,12 +300,9 @@ static void ACM_rx_free(uint32_t chunk) {
 
 /* called by user from non-ISR context */
 void ACM_to_console(void) {
-	uint8_t buf[64];
 	uint32_t chunk = ACM_rx_request();
-	chunk = MIN(chunk, sizeof(buf));
-	memcpy(buf, ACM_rxbuf+ACM_rx_get, chunk);
+	console_process(ACM_rxbuf+ACM_rx_get, chunk);
 	ACM_rx_free(chunk);
-	console_process(buf, chunk);
 }
 
 /* called by user from non-ISR context */
