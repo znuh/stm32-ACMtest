@@ -21,6 +21,7 @@
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/crs.h>
 #include <libopencm3/stm32/st_usbfs.h>
+#include <libopencm3/stm32/desig.h>
 
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
@@ -79,6 +80,19 @@ int _write(int file, char *ptr, int len) {
 	return drop ? len : ACM_tx(ptr, len, 1);
 }
 #endif
+
+static char serial_nr[16] = "0";
+
+static const char *usb_strings[] = {
+	"znu",
+	"ACMconsole",
+	serial_nr,
+};
+
+static usbd_device *usb_dev = NULL;
+
+/* Buffer to be used for control requests. */
+static uint8_t usbd_control_buffer[128];
 
 static const struct usb_device_descriptor dev = {
   .bLength = USB_DT_DEVICE_SIZE,
@@ -224,19 +238,7 @@ static const struct usb_config_descriptor config = {
 	.interface = ifaces,
 };
 
-static const char *usb_strings[] = {
-	"znu",
-	"ACMconsole",
-	"0",
-};
-
-void usb_setup(void);
-
 volatile int ACM_active     = 0;
-static usbd_device *usb_dev = NULL;
-
-/* Buffer to be used for control requests. */
-static uint8_t usbd_control_buffer[128];
 
 static enum usbd_request_return_codes cdcacm_control_request(usbd_device *usbd_dev, struct usb_setup_data *req, uint8_t **buf,
 		uint16_t *len, void (**complete)(usbd_device *usbd_dev, struct usb_setup_data *req)) {
@@ -325,13 +327,6 @@ int ACM_readbyte(void) {
 	}
 out:
 	return res;
-}
-
-void usb_shutdown(void) {
-	nvic_disable_irq(NVIC_USB_IRQ);
-	ACM_active = 0;
-	usbd_disconnect(usb_dev, true);
-	usb_dev = NULL;
 }
 
 static const char bl_string[] = "ICANHAZBOOTLOADER";
@@ -457,7 +452,12 @@ void usb_isr(void) {
 		usbd_poll(usb_dev);
 }
 
+void usb_setup(void);
+
 void usb_setup(void) {
+
+	desig_get_unique_id_as_dfu(serial_nr);
+
 #if defined(STM32F0)
 /* for PLL USB clock source an external HSE and PLL output of 48MHz is necessary */
 #ifdef USBCLK_USE_PLL
@@ -482,4 +482,12 @@ void usb_setup(void) {
 
 	nvic_set_priority(NVIC_USB_IRQ, 255);  // lowest priority
 	nvic_enable_irq(NVIC_USB_IRQ);
+}
+
+void usb_shutdown(void) {
+	nvic_disable_irq(NVIC_USB_IRQ);
+	ACM_active = 0;
+	usbd_disconnect(usb_dev, true);
+	usb_dev = NULL;
+	delay_ms(10);
 }
