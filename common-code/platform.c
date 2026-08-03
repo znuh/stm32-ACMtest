@@ -45,7 +45,7 @@ static void systick_setup(void) {
 	systick_interrupt_enable();
 }
 
-uint32_t __attribute__((section(".noinit"))) hardfault_dump[9];
+uint32_t __attribute__((section(".noinit"), used)) hardfault_dump[9];
 
 static uint32_t __attribute__((section(".noinit"))) boot_magic;
 

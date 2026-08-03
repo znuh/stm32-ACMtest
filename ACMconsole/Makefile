@@ -26,7 +26,7 @@ include ../rules.mk
 include $(OPENCM3_DIR)/mk/genlink-rules.mk
 
 all: $(PROJECT).bin
-	$(PREFIX)size $(PROJECT).elf
+	$(PREFIX)size -A $(PROJECT).elf
 
 load: $(PROJECT).bin
 	(echo ICANHAZBOOTLOADER > /dev/ttyACM0 && sleep 2) || true
