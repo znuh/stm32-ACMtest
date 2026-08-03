@@ -23,7 +23,7 @@ int main(void) {
 
 	/* main loop */
 	while(1) {
-		SLEEP_UNTIL((last != (now=jiffies)) || ACM_rx_fill);
+		SLEEP_UNTIL((last != (now=_jiffies)) || ACM_rx_fill);
 
 		if(ACM_rx_fill)
 			ACM_to_console();

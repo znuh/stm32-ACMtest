@@ -17,30 +17,10 @@ extern void usb_setup(void);
 static void gpio_setup(void) {
 }
 
-volatile uint32_t jiffies = 0;
+volatile uint64_t _jiffies = 0;
 
 void sys_tick_handler(void) {
-	jiffies++;
-}
-
-void timeout_set(timeout_t *to, uint32_t ticks) {
-	to->start = jiffies;
-	to->expired = ticks == 0;
-	to->end = to->start + ticks + 1;          /* need to add 2 timer cycles b/c current cycle already started */
-	to->need_rollover = to->start >= to->end; /* ticks is at least 1 so equal case means a rollover too */
-	to->rollover = 0;
-}
-
-int timeout_check(timeout_t *to, uint32_t now) {
-	to->rollover |= now < to->start;
-	to->expired  |= ((now >= to->end) && (to->rollover >= to->need_rollover)) || (to->rollover > to->need_rollover);
-	return to->expired;
-}
-
-void timeout_sleep(timeout_t *to) {
-	uint32_t last;
-	for(last=jiffies; !timeout_check(to, last); last=jiffies)
-		SLEEP_UNTIL(last != jiffies);
+	_jiffies++;
 }
 
 /*

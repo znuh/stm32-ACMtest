@@ -15,7 +15,7 @@ static void heartbeat_init(void) {
 }
 
 static void heartbeat(void) {
-	static timeout_t t = { .expired = 1 };
+	static timeout_t t = 0;
 	if(timeout(&t)) {
 		gpio_toggle(HEARTBEAT_LED_PORT, HEARTBEAT_LED_PIN);
 		timeout_set(&t, HZ/2);
