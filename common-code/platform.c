@@ -65,41 +65,34 @@ static void systick_setup(void) {
 	systick_interrupt_enable();
 }
 
-static void __attribute__( (section(".data#"), long_call, noinline) ) erase0_ram_func(void) {   /* extra # after section name mutes the asm warning m) */
-#if defined(STM32F0)
-	FLASH_CR |= FLASH_CR_PER;
-	FLASH_AR = 0x08000000; /* erase the page of the vetor table to enforce bootloader mode */
-	FLASH_CR |= FLASH_CR_STRT;
-#elif defined(STM32C0)
-	uint32_t reg = FLASH_CR;
-	reg &= ~(FLASH_CR_PNB_MASK << FLASH_CR_PNB_SHIFT);
-	reg |= (0 & FLASH_CR_PNB_MASK)  << FLASH_CR_PNB_SHIFT;
-	reg |= FLASH_CR_PER;
-	reg |= FLASH_CR_STRT;
-	FLASH_CR = reg;
-#else
-#	error "STM32 family not supported by this code"
-#endif
-	
-	while(FLASH_SR & FLASH_SR_BSY) {} /* busywait */
-	FLASH_CR &= ~FLASH_CR_PER;
+uint32_t __attribute__((section(".noinit"))) hardfault_dump[9];
 
-	SCB_AIRCR = SCB_AIRCR_VECTKEY | SCB_AIRCR_SYSRESETREQ; /* trigger system reset via SCB */
-	while(1) {}
+static uint32_t __attribute__((section(".noinit"))) boot_magic;
+
+static void __attribute__((constructor)) early_init(void) {
+	if(boot_magic != BOOTLOADER_MAGIC)
+		return;
+
+	boot_magic = 0;
+	__asm__ volatile ("CPSID I\n");
+
+	uint32_t *vtab = (uint32_t *)0x1FFF0000;
+	SCB_VTOR = (uint32_t)vtab;
+	__asm__ volatile (
+        "ldr r1, [%0]\n"
+        "msr msp, r1\n"
+        "ldr %0, [%0, #4]\n"
+        "bx %0\n"
+        : "+r" (vtab) : : "r1", "memory"
+    );
 }
 
-void erase_page0(uint32_t safety_key) {
-	if(safety_key != 0xAA55) {
-		SCB_AIRCR = SCB_AIRCR_VECTKEY | SCB_AIRCR_SYSRESETREQ; /* trigger system reset via SCB */
-		while(1) {}
-		return;
-	}
-	gpio_mode_setup(GPIOA, GPIO_MODE_INPUT, GPIO_PUPD_NONE, GPIO11 | GPIO12);
-	delay_ms(200);                /* wait a bit after USB disconnect - msleep would require the timer interrupt */
-	cm_disable_interrupts();
-	flash_unlock();
-	flash_wait_for_last_operation();
-	erase0_ram_func();
+void system_reset(uint32_t bl_magic) {
+	usb_shutdown();
+	boot_magic = bl_magic;
+	__asm__ volatile ("dsb\n");
+	SCB_AIRCR = SCB_AIRCR_VECTKEY | SCB_AIRCR_SYSRESETREQ; /* trigger system reset via SCB */
+	while(1){}
 }
 
 void hw_init(void) {

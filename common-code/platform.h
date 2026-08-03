@@ -60,6 +60,10 @@ void ACM_to_console(void);
 int  ACM_readbyte(void);
 void usb_shutdown(void);
 
-void erase_page0(uint32_t safety_key);
+#define BOOTLOADER_MAGIC	0xDEADBEEF
+void system_reset(uint32_t bl_magic);
+
+extern uint32_t hardfault_dump[9];
+#define HARDFAULT_MAGIC		0xDEADBEEF
 
 #endif /* PLATFORM_H */

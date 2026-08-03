@@ -97,6 +97,16 @@ static const struct usb_device_descriptor dev = {
   .bNumConfigurations = 1,
 };
 
+enum usb_interfaces {
+	ACM_COMM_IFNUM = 0,
+	ACM_DATA_IFNUM,
+	N_USB_INTERFACES
+};
+
+#define ACM_RXD_EP  0x01
+#define ACM_TXD_EP	0x82
+#define ACM_INT_EP	0x83
+
 /*
  * This notification endpoint isn't implemented. According to CDC spec its
  * optional, but its absence causes a NULL pointer dereference in Linux
@@ -105,7 +115,7 @@ static const struct usb_device_descriptor dev = {
 static const struct usb_endpoint_descriptor comm_endp[] = {{
 	.bLength = USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType = USB_DT_ENDPOINT,
-	.bEndpointAddress = 0x83,
+	.bEndpointAddress = ACM_INT_EP,
 	.bmAttributes = USB_ENDPOINT_ATTR_INTERRUPT,
 	.wMaxPacketSize = 16,
 	.bInterval = 255,
@@ -114,14 +124,14 @@ static const struct usb_endpoint_descriptor comm_endp[] = {{
 static const struct usb_endpoint_descriptor data_endp[] = {{
 	.bLength = USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType = USB_DT_ENDPOINT,
-	.bEndpointAddress = 0x01,
+	.bEndpointAddress = ACM_RXD_EP,
 	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
 	.wMaxPacketSize = 64,
 	.bInterval = 1,
 }, {
 	.bLength = USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType = USB_DT_ENDPOINT,
-	.bEndpointAddress = 0x82,
+	.bEndpointAddress = ACM_TXD_EP,
 	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
 	.wMaxPacketSize = 64,
 	.bInterval = 1,
@@ -165,7 +175,7 @@ static const struct {
 static const struct usb_interface_descriptor comm_iface[] = {{
 	.bLength = USB_DT_INTERFACE_SIZE,
 	.bDescriptorType = USB_DT_INTERFACE,
-	.bInterfaceNumber = 0,
+	.bInterfaceNumber = ACM_COMM_IFNUM,
 	.bAlternateSetting = 0,
 	.bNumEndpoints = 1,
 	.bInterfaceClass = USB_CLASS_CDC,
@@ -182,7 +192,7 @@ static const struct usb_interface_descriptor comm_iface[] = {{
 static const struct usb_interface_descriptor data_iface[] = {{
 	.bLength = USB_DT_INTERFACE_SIZE,
 	.bDescriptorType = USB_DT_INTERFACE,
-	.bInterfaceNumber = 1,
+	.bInterfaceNumber = ACM_DATA_IFNUM,
 	.bAlternateSetting = 0,
 	.bNumEndpoints = 2,
 	.bInterfaceClass = USB_CLASS_DATA,
@@ -205,7 +215,7 @@ static const struct usb_config_descriptor config = {
 	.bLength = USB_DT_CONFIGURATION_SIZE,
 	.bDescriptorType = USB_DT_CONFIGURATION,
 	.wTotalLength = 0,
-	.bNumInterfaces = 2,
+	.bNumInterfaces = N_USB_INTERFACES,
 	.bConfigurationValue = 1,
 	.iConfiguration = 0,
 	.bmAttributes = 0x80,
@@ -262,8 +272,6 @@ static enum usbd_request_return_codes cdcacm_control_request(usbd_device *usbd_d
 	}
 	return USBD_REQ_NOTSUPP;
 }
-
-static const char bl_string[] = "ICANHAZBOOTLOADER";
 
 #define  ACM_RXBUF_SZ             128
 static   uint32_t ACM_rx_put    = 0;
@@ -326,19 +334,19 @@ void usb_shutdown(void) {
 	usb_dev = NULL;
 }
 
+static const char bl_string[] = "ICANHAZBOOTLOADER";
+
 /* called by USB stack in USB ISR context */
 static void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep) {
 	char buf[64], *d=buf;
 	int len;
-	if(ep != 0x01)
+	if(ep != ACM_RXD_EP)
 		return;
-	len = usbd_ep_read_packet(usbd_dev, 0x01, buf, 64);
+	len = usbd_ep_read_packet(usbd_dev, ep, buf, 64);
 	if(!len)
 		return;
-	if((len >= (int)(sizeof(bl_string)-1)) && (!memcmp(buf,bl_string,sizeof(bl_string)-1))) {
-		usb_shutdown();
-		erase_page0(0xAA55);
-	}
+	if((len >= (int)(sizeof(bl_string)-1)) && (!memcmp(buf,bl_string,sizeof(bl_string)-1)))
+		system_reset(BOOTLOADER_MAGIC);
 	SIGINT += !!memchr(buf,0x03,len);
 	len = MIN(len, (int)(ACM_RXBUF_SZ-ACM_rx_fill)); // clamp len to avoid rxbuf overruns
 	ACM_rx_fill+=len;
@@ -424,7 +432,7 @@ int ACM_tx(const void *p, size_t n, int ascii) {
 	}
 
 	if((ACM_tx_fill) && (!ACM_tx_active))
-		cdcacm_data_tx_cb(usb_dev, 0x82); /* send 1st chunk */
+		cdcacm_data_tx_cb(usb_dev, ACM_TXD_EP); /* send 1st chunk */
 
 	if(isr_state)
 		nvic_enable_irq(NVIC_USB_IRQ);
@@ -432,9 +440,9 @@ int ACM_tx(const void *p, size_t n, int ascii) {
 }
 
 static void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue) {
-	usbd_ep_setup(usbd_dev, 0x01, USB_ENDPOINT_ATTR_BULK, 64, cdcacm_data_rx_cb);
-	usbd_ep_setup(usbd_dev, 0x82, USB_ENDPOINT_ATTR_BULK, 64, cdcacm_data_tx_cb);
-	usbd_ep_setup(usbd_dev, 0x83, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
+	usbd_ep_setup(usbd_dev, ACM_RXD_EP, USB_ENDPOINT_ATTR_BULK, 64, cdcacm_data_rx_cb);
+	usbd_ep_setup(usbd_dev, ACM_TXD_EP, USB_ENDPOINT_ATTR_BULK, 64, cdcacm_data_tx_cb);
+	usbd_ep_setup(usbd_dev, ACM_INT_EP, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 	usbd_register_control_callback(
 				usbd_dev,
 				USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
