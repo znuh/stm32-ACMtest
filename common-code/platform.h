@@ -11,8 +11,8 @@
 
 /* simple core delay loop w/o sleeping */
 #define delay_cycles(n)   delay_loop((n)>>2)   // no need for +1 because there's always 5 extra cycles anyway
-#define delay_us(n)       delay_loop((n)*12)
-#define delay_ms(n)       delay_loop((n)*12000)
+#define delay_us(n)       delay_loop((n)*16)
+#define delay_ms(n)       delay_loop((n)*16000)
 
 #define HZ                100
 #define MSEC             (1000/HZ)
