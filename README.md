@@ -8,6 +8,7 @@ Easy "clone and go" repository for a libopencm3-based STM32F0 project with an AC
 **=> no external HSE crystal is needed for USB**
 * USB ACM device (with timing-critical USB done in an ISR)
 * ACM console with tab completion, history, help, args checking, etc. (non-ISR context)
+* "hf" command to display register values from a previous HardFault
 * systick timer
 * WFI based sleeping
 * heartbeat LED (optional, disabled by default - check config.h)
@@ -16,10 +17,10 @@ Easy "clone and go" repository for a libopencm3-based STM32F0 project with an AC
 # USB DFU Bootloader
 Several STM32 parts with builtin USB have a bootROM USB DFU bootloader for firmware programming. No SWD/UART connection is needed then. Firmware can be installed via USB - e.g. with **dfu-util**.
 This bootloader can be invoked through the *BOOT0* pin. It is also invoked automatically when no valid firmware resides in the flash (i.e. the first page of the flash does not have a valid **vector table**).  
-This project includes two commands for reenabling the STM bootROM bootloader to accept a new firmware. This is done by **erasing the first flash page** to clear the vector table. **So beware - remove after development** as these commands intentionally erase part of the firmware!
+This project includes two commands for invoking the STM bootROM bootloader to accept a new firmware.
 
 The ROM bootloader can be reactivated
-* using the **erase_vt** command in the ACM console
+* using the **reset bl** command in the ACM console
 * by sending the string **ICANHAZBOOTLOADER** to the ACM device in a single USB paket.  
 (this can be done easily with ```echo ICANHAZBOOTLOADER > /dev/ttyACMx``` on Linux - see Makefile)
 
