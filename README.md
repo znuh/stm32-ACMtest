@@ -1,7 +1,7 @@
 This is a USB ACM demo / template project for STM32C0/F0 MCUs. The ACM device provides a fancy console with tab completion, history, help, etc.
 It is based on the libopencm3-template repository (https://github.com/libopencm3/libopencm3-template.git) and the anchor console implementation (https://github.com/rideskip/anchor/tree/master/console).
 
-Easy "clone and go" repository for a libopencm3-based STM32F0 project with an ACM console via USB.
+Easy "clone and go" repository for a libopencm3-based STM32C0/F0 project with an ACM console via USB.
 
 # Features
 * crystal-less USB operation (using the Clock Recovery System (CRS))  
