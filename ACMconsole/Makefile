@@ -7,7 +7,7 @@ GIT_REMOTE  := "$(shell git config --get remote.origin.url)"
 GIT_VERSION := "$(GIT_REMOTE) $(GIT_BRANCH) $(GIT_COMMIT)"
 
 SHARED_DIR = ../common-code
-CFILES = main.c acmconsole.c
+CFILES = main.c acmconsole.c leds.c
 CFILES += console.c platform.c stm32_usb.c utils.c
 AFILES += lowlevel.S
 CFLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\"
