@@ -11,8 +11,8 @@ Easy "clone and go" repository for a libopencm3-based STM32C0/F0 project with an
 * "hf" command to display register values from a previous HardFault
 * systick timer
 * WFI based sleeping
-* heartbeat LED (optional, disabled by default - check config.h)
-* builtin switch to STM bootROM USB DFU bootloader - **read next section!**
+* heartbeat LED (optional, enabled by default - check config.h)
+* builtin switch to STM bootROM USB DFU bootloader - see next section
 
 # USB DFU Bootloader
 Several STM32 parts with builtin USB have a bootROM USB DFU bootloader for firmware programming. No SWD/UART connection is needed then. Firmware can be installed via USB - e.g. with **dfu-util**.
