@@ -97,19 +97,17 @@ CONSOLE_COMMAND_DEF(hf, "dump hardfault regs / test hardfault",
 );
 static void hf_command_handler(const hf_args_t* args) {
 	static const char rnames[8][4] = {"r0", "r1", "r2", "r3", "r12", "lr", "pc", "psr"};
+	if(args->opt && !strcmp(args->opt,"test")) {
+		__asm volatile ("udf #0");
+	}
 	if(hardfault_dump[8] != HARDFAULT_MAGIC)
 		return;
 	puts("HardFault Dump:");
 	for(int i=0;i<8;i++)
 		printf("%3s %08"PRIx32"\n",rnames[i],hardfault_dump[i]);
-	if(args->opt) {
-		 if(!strcmp(args->opt,"clear")) {
-			hardfault_dump[8]=0;
-			puts("Dump cleared.");
-		}
-		else if(!strcmp(args->opt,"test")) {
-			__asm volatile ("udf #0");
-		}
+	if(args->opt && !strcmp(args->opt,"clear")) {
+		hardfault_dump[8]=0;
+		puts("Dump cleared.");
 	}
 }
 
