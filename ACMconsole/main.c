@@ -44,6 +44,7 @@ int main(void) {
 #endif /* BOOT0 */
 
 		leds_service();
+		last = now;
 	}
 	return 0;
 }

@@ -1,4 +1,6 @@
+#include "config.h"
 #include "platform.h"
+#include "leds.h"
 
 // see config.h
 #if defined(HEARTBEAT_LED_PORT) && defined(HEARTBEAT_LED_PIN)
@@ -36,6 +38,7 @@ static void heartbeat(uint32_t now)	{now=now;}
 static void pwmled_init(void) {
     uint32_t prescaler = (rcc_apb1_frequency / (PWM_FREQUENCY * (PWM_MAXVAL+1))) - 1;
 
+	rcc_periph_clock_enable(RCC_GPIOB);
 	gpio_set_output_options(GPIOB, GPIO_OTYPE_PP, GPIO_OSPEED_LOW, GPIO1);
 	gpio_mode_setup(GPIOB, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO1);
 	gpio_set_af(GPIOB, GPIO_AF0, GPIO1);
